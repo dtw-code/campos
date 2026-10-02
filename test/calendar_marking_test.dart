@@ -40,7 +40,8 @@ void main() {
                 body: Builder(
                   builder: (context) {
                     return ElevatedButton(
-                      onPressed: () => EventDetailsScreen.show(context, testEvent),
+                      onPressed: () =>
+                          EventDetailsScreen.show(context, testEvent),
                       child: const Text('Open Modal'),
                     );
                   },
@@ -107,7 +108,8 @@ void main() {
               body: Builder(
                 builder: (context) {
                   return ElevatedButton(
-                    onPressed: () => EventDetailsScreen.show(context, testEvent),
+                    onPressed: () =>
+                        EventDetailsScreen.show(context, testEvent),
                     child: const Text('Open Modal'),
                   );
                 },
@@ -132,40 +134,39 @@ void main() {
       expect(provider.getCalendarMarkedDays(2026, 8).contains(28), isTrue);
     });
 
-    testWidgets(
-      'EventsScreen renders Calendar View and highlights August 28',
-      (WidgetTester tester) async {
-        tester.view.physicalSize = const Size(1080, 2400);
-        tester.view.devicePixelRatio = 2.0;
-        addTearDown(() {
-          tester.view.resetPhysicalSize();
-          tester.view.resetDevicePixelRatio();
-        });
+    testWidgets('EventsScreen renders Calendar View and highlights August 28', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-        final provider = EventProvider();
+      final provider = EventProvider();
 
-        await tester.pumpWidget(
-          ChangeNotifierProvider<EventProvider>.value(
-            value: provider,
-            child: const MaterialApp(home: EventsScreen()),
-          ),
-        );
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        ChangeNotifierProvider<EventProvider>.value(
+          value: provider,
+          child: const MaterialApp(home: EventsScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-        // Top view switcher
-        expect(find.text('Calendar View'), findsOneWidget);
-        expect(find.text('All Events List'), findsOneWidget);
+      // Top view switcher
+      expect(find.text('Calendar View'), findsOneWidget);
+      expect(find.text('All Events List'), findsOneWidget);
 
-        // August 2026 is visible
-        expect(find.text('August 2026'), findsOneWidget);
+      // August 2026 is visible
+      expect(find.text('August 2026'), findsOneWidget);
 
-        // Date 28 is displayed in the calendar
-        expect(find.text('28'), findsWidgets);
+      // Date 28 is displayed in the calendar
+      expect(find.text('28'), findsWidgets);
 
-        // Legend is present
-        expect(find.text('Marked by You'), findsOneWidget);
-        expect(find.text('Campus Event'), findsOneWidget);
-      },
-    );
+      // Legend is present
+      expect(find.text('Marked by You'), findsOneWidget);
+      expect(find.text('Campus Event'), findsOneWidget);
+    });
   });
 }

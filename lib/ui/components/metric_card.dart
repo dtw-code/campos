@@ -27,7 +27,7 @@ class MetricCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: AppColors.cardSurface,
             borderRadius: BorderRadius.circular(16),
@@ -46,15 +46,15 @@ class MetricCard extends StatelessWidget {
             children: [
               // Icon Indicator Container
               Container(
-                width: 38,
-                height: 38,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: iconBackgroundColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Center(child: Icon(icon, color: iconColor, size: 20)),
+                child: Center(child: Icon(icon, color: iconColor, size: 19)),
               ),
-              const SizedBox(height: 12),
+              const Spacer(),
               // Value Count & Label
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,10 +63,11 @@ class MetricCard extends StatelessWidget {
                   Text(
                     '$count',
                     style: const TextStyle(
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.w800,
                       color: AppColors.textPrimary,
                       letterSpacing: -0.5,
+                      height: 1.1,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -75,7 +76,7 @@ class MetricCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: AppColors.textSecondary,
                     ),

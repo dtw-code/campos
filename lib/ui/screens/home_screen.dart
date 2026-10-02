@@ -202,7 +202,7 @@ class HomeScreen extends StatelessWidget {
       mainAxisSpacing: 12,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.45,
+      childAspectRatio: 1.28,
       children: [
         // 1. Upcoming Events (green indicator)
         MetricCard(
