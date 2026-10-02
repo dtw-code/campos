@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'state/event_provider.dart';
-import 'ui/screens/main_navigation_screen.dart';
-import 'ui/theme/app_colors.dart';
+import 'package:campos/state/event_provider.dart';
+import 'package:campos/ui/screens/main_navigation_screen.dart';
+import 'package:campos/ui/theme/app_colors.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
