@@ -11,6 +11,8 @@ class Event {
   final bool isSaved;
   final bool isCalendarMarked;
   final String organizer;
+  final int minMembers;
+  final int maxMembers;
 
   const Event({
     required this.id,
@@ -25,6 +27,8 @@ class Event {
     this.isSaved = false,
     this.isCalendarMarked = false,
     this.organizer = 'Campus Student Council',
+    this.minMembers = 1,
+    this.maxMembers = 4,
   });
 
   /// Compatibility getter for title
@@ -79,6 +83,14 @@ class Event {
     return '$m ${date.day}, ${date.year}';
   }
 
+  /// Formatted team / member range string (e.g. "Min: 2 • Max: 4 members")
+  String get membersRange {
+    if (minMembers == maxMembers) {
+      return '$minMembers ${minMembers == 1 ? "member" : "members"} (Min: $minMembers, Max: $maxMembers)';
+    }
+    return 'Min: $minMembers • Max: $maxMembers members';
+  }
+
   factory Event.fromJson(Map<String, dynamic> json) {
     // Parse date safely
     DateTime parsedDate;
@@ -107,6 +119,13 @@ class Event {
       parsedCategories = [json['category'] as String];
     }
 
+    final minM = json['min_members'] is int
+        ? json['min_members'] as int
+        : (json['minMembers'] is int ? json['minMembers'] as int : 1);
+    final maxM = json['max_members'] is int
+        ? json['max_members'] as int
+        : (json['maxMembers'] is int ? json['maxMembers'] as int : 4);
+
     return Event(
       id: json['id']?.toString() ?? '',
       eventName: json['event_name'] ?? json['eventName'] ?? json['title'] ?? '',
@@ -121,6 +140,8 @@ class Event {
       isCalendarMarked:
           json['is_calendar_marked'] ?? json['isCalendarMarked'] ?? false,
       organizer: json['organizer']?.toString() ?? 'Campus Pilot Committee',
+      minMembers: minM,
+      maxMembers: maxM,
     );
   }
 
@@ -138,6 +159,8 @@ class Event {
       'is_saved': isSaved,
       'is_calendar_marked': isCalendarMarked,
       'organizer': organizer,
+      'min_members': minMembers,
+      'max_members': maxMembers,
     };
   }
 
@@ -154,6 +177,8 @@ class Event {
     bool? isSaved,
     bool? isCalendarMarked,
     String? organizer,
+    int? minMembers,
+    int? maxMembers,
   }) {
     return Event(
       id: id ?? this.id,
@@ -168,6 +193,8 @@ class Event {
       isSaved: isSaved ?? this.isSaved,
       isCalendarMarked: isCalendarMarked ?? this.isCalendarMarked,
       organizer: organizer ?? this.organizer,
+      minMembers: minMembers ?? this.minMembers,
+      maxMembers: maxMembers ?? this.maxMembers,
     );
   }
 }

@@ -23,6 +23,8 @@ class EventService {
       registrationUrl: 'https://hackmit.example.edu/register',
       isSaved: false,
       organizer: 'MIT Tech Club',
+      minMembers: 2,
+      maxMembers: 4,
     ),
     Event(
       id: 'evt-102',
@@ -37,6 +39,8 @@ class EventService {
       registrationUrl: 'https://robotics.example.edu/symposium',
       isSaved: true,
       organizer: 'Robotics Lab',
+      minMembers: 1,
+      maxMembers: 3,
     ),
     Event(
       id: 'evt-103',
@@ -51,6 +55,8 @@ class EventService {
       registrationUrl: 'https://gdg.example.edu/flutter-ds',
       isSaved: false,
       organizer: 'Google Developer Group On Campus',
+      minMembers: 1,
+      maxMembers: 2,
     ),
     Event(
       id: 'evt-104',
@@ -65,6 +71,8 @@ class EventService {
       registrationUrl: 'https://careers.example.edu/fall-fair',
       isSaved: false,
       organizer: 'Career Services Office',
+      minMembers: 1,
+      maxMembers: 1,
     ),
     Event(
       id: 'evt-105',
@@ -79,6 +87,8 @@ class EventService {
       registrationUrl: 'https://blockchain.example.edu/keynote',
       isSaved: false,
       organizer: 'Computer Science Department',
+      minMembers: 1,
+      maxMembers: 1,
     ),
   ];
 

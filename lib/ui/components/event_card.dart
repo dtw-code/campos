@@ -217,6 +217,31 @@ class EventCard extends StatelessWidget {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 4),
+
+                      // Members Info Row
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.people_outline_rounded,
+                            size: 13,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              event.membersRange,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

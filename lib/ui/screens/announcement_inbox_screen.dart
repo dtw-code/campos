@@ -199,6 +199,8 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
       registrationDeadline: _registrationDeadline,
       isCalendarMarked: true,
       organizer: 'Campus Student Council',
+      minMembers: _selectedCategory.toLowerCase() == 'hackathon' ? 2 : 1,
+      maxMembers: _selectedCategory.toLowerCase() == 'hackathon' ? 4 : 2,
     );
 
     context.read<EventProvider>().addEvent(newEvent);

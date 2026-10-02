@@ -211,6 +211,13 @@ class EventDetailsScreen extends StatelessWidget {
                             title: 'Organized By',
                             subtitle: currentEvent.organizer,
                           ),
+                          const Divider(height: 20),
+                          _buildDetailRow(
+                            icon: Icons.people_alt_rounded,
+                            iconColor: AppColors.purpleAccent,
+                            title: 'Team Size / Members',
+                            subtitle: currentEvent.membersRange,
+                          ),
                           if (currentEvent.registrationDeadline != null) ...[
                             const Divider(height: 20),
                             _buildDetailRow(
