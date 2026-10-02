@@ -9,7 +9,7 @@ class EventDetailsScreen extends StatelessWidget {
 
   const EventDetailsScreen({super.key, required this.event});
 
-  /// Helper to show as a modal bottom sheet or full screen
+  /// Helper to show as a modal bottom sheet
   static void show(BuildContext context, Event event) {
     showModalBottomSheet(
       context: context,
@@ -21,7 +21,7 @@ class EventDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Watch provider to keep saved state in sync
+    // Watch provider to keep saved and calendar-marked state in sync
     final provider = context.watch<EventProvider>();
     final currentEvent = provider.events.firstWhere(
       (e) => e.id == event.id,
@@ -29,7 +29,7 @@ class EventDetailsScreen extends StatelessWidget {
     );
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.85,
+      initialChildSize: 0.88,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
@@ -62,7 +62,7 @@ class EventDetailsScreen extends StatelessWidget {
                     vertical: 8,
                   ),
                   children: [
-                    // Header Banner with Date Badge and Categories
+                    // Header Banner with Date Badge, Categories and Bookmark
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -136,7 +136,7 @@ class EventDetailsScreen extends StatelessWidget {
                             ],
                           ),
                         ),
-                        // Bookmark button
+                        // Bookmark icon button
                         IconButton(
                           icon: Icon(
                             currentEvent.isSaved
@@ -181,7 +181,7 @@ class EventDetailsScreen extends StatelessWidget {
 
                     const SizedBox(height: 16),
 
-                    // Info Cards (Time, Venue, Organizer)
+                    // Info Cards (Time, Venue, Organizer, Registration Deadline)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -247,59 +247,251 @@ class EventDetailsScreen extends StatelessWidget {
                         height: 1.5,
                       ),
                     ),
-                    const SizedBox(height: 30),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
 
-              // Bottom Action Button
+              // Bottom 3 Action Buttons: Registration, Add to Calendar, Notion
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   border: Border(
                     top: BorderSide(color: AppColors.cardBorder, width: 1),
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Registration portal launched for this event!',
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Button 1: Registration Button (Direct primary action)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            final url =
+                                currentEvent.registrationUrl ??
+                                'https://events.campus.edu/register/${currentEvent.id}';
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.open_in_browser_rounded,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        'Opening registration link:\n$url',
+                                        style: const TextStyle(fontSize: 12.5),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: AppColors.navyDark,
+                                duration: const Duration(seconds: 3),
                               ),
-                              backgroundColor: AppColors.navyDark,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.navyDark,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.navyDark,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            elevation: 0,
                           ),
-                          elevation: 0,
-                        ),
-                        icon: const Icon(
-                          Icons.open_in_new_rounded,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        label: const Text(
-                          'Register for Event',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
+                          icon: const Icon(
+                            Icons.open_in_new_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          ),
+                          label: const Text(
+                            'Registration',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+
+                      const SizedBox(height: 10),
+
+                      // Row for Button 2 (Add to Calendar) & Button 3 (Notion)
+                      Row(
+                        children: [
+                          // Button 2: Add to Calendar
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                final isNowMarked = context
+                                    .read<EventProvider>()
+                                    .toggleCalendarMark(currentEvent.id);
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Icon(
+                                          isNowMarked
+                                              ? Icons.check_circle_rounded
+                                              : Icons.event_busy_rounded,
+                                          color: Colors.white,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            isNowMarked
+                                                ? 'Added to calendar! Marked on ${currentEvent.monthShort} ${currentEvent.day}.'
+                                                : 'Removed from calendar.',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: isNowMarked
+                                        ? AppColors.greenIndicator
+                                        : AppColors.navyDark,
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: currentEvent.isCalendarMarked
+                                    ? AppColors.greenLight
+                                    : AppColors.purpleLight.withAlpha(120),
+                                side: BorderSide(
+                                  color: currentEvent.isCalendarMarked
+                                      ? AppColors.greenIndicator
+                                      : AppColors.purpleBorder,
+                                  width: 1.5,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: Icon(
+                                currentEvent.isCalendarMarked
+                                    ? Icons.event_available_rounded
+                                    : Icons.calendar_today_rounded,
+                                size: 16,
+                                color: currentEvent.isCalendarMarked
+                                    ? AppColors.greenIndicator
+                                    : AppColors.purpleDarkText,
+                              ),
+                              label: Text(
+                                currentEvent.isCalendarMarked
+                                    ? 'Marked in Calendar'
+                                    : 'Add to Calendar',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: currentEvent.isCalendarMarked
+                                      ? AppColors.greenIndicator
+                                      : AppColors.purpleDarkText,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(width: 10),
+
+                          // Button 3: Notion Button
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            'N',
+                                            style: TextStyle(
+                                              color: Colors.black,
+                                              fontWeight: FontWeight.w900,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Synced "${currentEvent.eventName}" to your Notion workspace!',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    backgroundColor: const Color(0xFF2E2E2E),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: const Color(0xFFF7F7F5),
+                                side: const BorderSide(
+                                  color: Color(0xFFE0E0DC),
+                                  width: 1.5,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 1,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                                child: const Text(
+                                  'N',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                              label: const Text(
+                                'Notion',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF2E2E2E),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

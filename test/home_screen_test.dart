@@ -181,7 +181,9 @@ void main() {
 
       // Details sheet content
       expect(find.text('About This Event'), findsOneWidget);
-      expect(find.text('Register for Event'), findsOneWidget);
+      expect(find.text('Registration'), findsOneWidget);
+      expect(find.text('Add to Calendar'), findsOneWidget);
+      expect(find.text('Notion'), findsOneWidget);
     });
   });
 }

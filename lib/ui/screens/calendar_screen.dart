@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/event.dart';
 import '../../state/event_provider.dart';
+import '../components/event_card.dart';
 import '../theme/app_colors.dart';
 import 'event_details_screen.dart';
 
@@ -19,7 +20,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   void initState() {
     super.initState();
-    _focusedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+    // Default to August 2026 to align with mock events like HackMIT on August 28
+    _focusedMonth = DateTime(2026, 8);
+    _selectedDay = DateTime(2026, 8, 28);
   }
 
   void _goToPreviousMonth() {
@@ -36,7 +39,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     });
   }
 
-  /// Check if a day has events
   List<Event> _eventsForDay(List<Event> allEvents, DateTime day) {
     return allEvents.where((e) {
       return e.date.year == day.year &&
@@ -45,23 +47,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }).toList();
   }
 
-  /// Collect all distinct event dates in the focused month for marker dots
-  Set<int> _eventDaysInMonth(List<Event> allEvents) {
-    final days = <int>{};
-    for (final event in allEvents) {
-      if (event.date.year == _focusedMonth.year &&
-          event.date.month == _focusedMonth.month) {
-        days.add(event.date.day);
-      }
-    }
-    return days;
-  }
-
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<EventProvider>();
     final allEvents = provider.events;
-    final eventDays = _eventDaysInMonth(allEvents);
+
+    // Collect days marked by the student
+    final markedDays = provider.getCalendarMarkedDays(
+      _focusedMonth.year,
+      _focusedMonth.month,
+    );
+
+    // Collect all event days
+    final allEventDays = <int>{};
+    for (final event in allEvents) {
+      if (event.date.year == _focusedMonth.year &&
+          event.date.month == _focusedMonth.month) {
+        allEventDays.add(event.date.day);
+      }
+    }
 
     final selectedDayEvents = _selectedDay != null
         ? _eventsForDay(allEvents, _selectedDay!)
@@ -69,39 +73,46 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.navyDark,
+        elevation: 0,
+        title: const Text(
+          'Campus Calendar',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+      ),
       body: Column(
         children: [
           // Header
-          _buildHeader(),
+          _buildHeader(markedDays.length),
 
-          // Calendar Grid
+          // Scrollable calendar & events
           Expanded(
             child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 24),
               child: Column(
                 children: [
-                  // Month Navigation
-                  _buildMonthNavigator(),
-
-                  // Day of Week Labels
+                  _buildMonthNavigator(markedDays.length),
                   _buildDayOfWeekLabels(),
+                  _buildCalendarGrid(allEventDays, markedDays),
+                  _buildLegend(),
 
-                  // Calendar Day Grid
-                  _buildCalendarGrid(eventDays),
+                  const SizedBox(height: 12),
 
-                  // Selected Day Events Section
                   if (_selectedDay != null) ...[
-                    const SizedBox(height: 8),
                     _buildSelectedDayHeader(),
                     if (selectedDayEvents.isEmpty)
                       _buildNoEventsPlaceholder()
                     else
                       _buildEventsList(selectedDayEvents),
                   ] else ...[
-                    const SizedBox(height: 24),
-                    _buildHintSection(eventDays.length),
+                    const SizedBox(height: 16),
+                    _buildHintSection(markedDays.length),
                   ],
-
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -111,21 +122,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(int markedCount) {
     return Container(
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 16,
-        left: 20,
-        right: 20,
-        bottom: 16,
-      ),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.navyDark, AppColors.navySurface],
-        ),
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+      color: AppColors.navyDark,
       child: Row(
         children: [
           Container(
@@ -141,38 +141,37 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Campus Calendar',
+                const Text(
+                  'Marked Campus Dates',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
-                    letterSpacing: -0.3,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
-                  'Tap dates to see events',
-                  style: TextStyle(
-                    fontSize: 13,
+                  markedCount == 0
+                      ? 'No dates marked yet. Add events to calendar!'
+                      : '$markedCount event date${markedCount == 1 ? '' : 's'} highlighted on your calendar',
+                  style: const TextStyle(
+                    fontSize: 12.5,
                     color: AppColors.textMuted,
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
           ),
-          // Today shortcut
+          // Jump to Aug 2026 / Hackathon shortcut
           GestureDetector(
             onTap: () {
               setState(() {
-                final now = DateTime.now();
-                _focusedMonth = DateTime(now.year, now.month);
-                _selectedDay = DateTime(now.year, now.month, now.day);
+                _focusedMonth = DateTime(2026, 8);
+                _selectedDay = DateTime(2026, 8, 28);
               });
             },
             child: Container(
@@ -180,10 +179,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               decoration: BoxDecoration(
                 color: AppColors.greenBadge.withAlpha(30),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.greenBadge.withAlpha(60)),
+                border: Border.all(color: AppColors.greenBadge.withAlpha(80)),
               ),
               child: const Text(
-                'Today',
+                'Aug 28',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -197,10 +196,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildMonthNavigator() {
+  Widget _buildMonthNavigator(int markedInMonth) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     final monthName = months[_focusedMonth.month - 1];
 
@@ -210,14 +219,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _buildArrowButton(Icons.chevron_left_rounded, _goToPreviousMonth),
-          Text(
-            '$monthName ${_focusedMonth.year}',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-              letterSpacing: -0.3,
-            ),
+          Column(
+            children: [
+              Text(
+                '$monthName ${_focusedMonth.year}',
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              if (markedInMonth > 0)
+                Text(
+                  '$markedInMonth marked by you',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.greenIndicator,
+                  ),
+                ),
+            ],
           ),
           _buildArrowButton(Icons.chevron_right_rounded, _goToNextMonth),
         ],
@@ -243,7 +264,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildDayOfWeekLabels() {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Row(
         children: days.map((d) {
           return Expanded(
@@ -263,28 +284,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildCalendarGrid(Set<int> eventDays) {
+  Widget _buildCalendarGrid(Set<int> allEventDays, Set<int> markedDays) {
     final year = _focusedMonth.year;
     final month = _focusedMonth.month;
     final daysInMonth = DateUtils.getDaysInMonth(year, month);
-    final firstWeekday = DateTime(year, month, 1).weekday; // 1=Mon
+    final firstWeekday = DateTime(year, month, 1).weekday;
 
-    final now = DateTime.now();
-    final isCurrentMonth = now.year == year && now.month == month;
-
-    // Build grid cells
     final cells = <Widget>[];
 
-    // Leading empty cells
     for (int i = 1; i < firstWeekday; i++) {
       cells.add(const SizedBox());
     }
 
-    // Day cells
     for (int day = 1; day <= daysInMonth; day++) {
-      final hasEvent = eventDays.contains(day);
-      final isToday = isCurrentMonth && now.day == day;
-      final isSelected = _selectedDay != null &&
+      final isMarked = markedDays.contains(day);
+      final hasEvent = allEventDays.contains(day);
+      final isSelected =
+          _selectedDay != null &&
           _selectedDay!.year == year &&
           _selectedDay!.month == month &&
           _selectedDay!.day == day;
@@ -297,18 +313,31 @@ class _CalendarScreenState extends State<CalendarScreen> {
             });
           },
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
+            duration: const Duration(milliseconds: 180),
             margin: const EdgeInsets.all(3),
             decoration: BoxDecoration(
               color: isSelected
                   ? AppColors.navyDark
-                  : isToday
-                      ? AppColors.purpleLight
-                      : Colors.transparent,
+                  : isMarked
+                  ? AppColors.greenLight
+                  : Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: isToday && !isSelected
-                  ? Border.all(color: AppColors.purpleAccent, width: 1.5)
+              border: Border.all(
+                color: isSelected
+                    ? AppColors.navyDark
+                    : isMarked
+                    ? AppColors.greenIndicator
+                    : AppColors.cardBorder,
+                width: isMarked || isSelected ? 1.5 : 1,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: AppColors.navyDark.withAlpha(35),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
                   : null,
             ),
             child: Column(
@@ -317,29 +346,42 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 Text(
                   '$day',
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: isSelected || isToday
+                    fontSize: 13.5,
+                    fontWeight: isSelected || isMarked
                         ? FontWeight.w800
-                        : FontWeight.w500,
+                        : FontWeight.w600,
                     color: isSelected
                         ? Colors.white
-                        : isToday
-                            ? AppColors.purpleAccent
-                            : AppColors.textPrimary,
+                        : isMarked
+                        ? AppColors.greenIndicator
+                        : AppColors.textPrimary,
                   ),
                 ),
-                if (hasEvent)
+                const SizedBox(height: 2),
+                if (isMarked)
                   Container(
-                    margin: const EdgeInsets.only(top: 3),
-                    width: 6,
-                    height: 6,
+                    width: 7,
+                    height: 7,
                     decoration: BoxDecoration(
                       color: isSelected
                           ? AppColors.greenBadge
+                          : AppColors.greenIndicator,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                else if (hasEvent)
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Colors.white70
                           : AppColors.purpleAccent,
                       shape: BoxShape.circle,
                     ),
-                  ),
+                  )
+                else
+                  const SizedBox(height: 7),
               ],
             ),
           ),
@@ -348,31 +390,96 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GridView.count(
         crossAxisCount: 7,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 1.0,
+        childAspectRatio: 1.05,
         children: cells,
+      ),
+    );
+  }
+
+  Widget _buildLegend() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: AppColors.greenIndicator,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 5),
+              const Text(
+                'Marked on Calendar',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 18),
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: AppColors.purpleAccent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 5),
+              const Text(
+                'Campus Event',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSelectedDayHeader() {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
-    final dayStr = '${months[_selectedDay!.month - 1]} ${_selectedDay!.day}, ${_selectedDay!.year}';
+    final dayStr =
+        '${months[_selectedDay!.month - 1]} ${_selectedDay!.day}, ${_selectedDay!.year}';
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
       child: Row(
         children: [
           Container(
             width: 4,
-            height: 22,
+            height: 20,
             decoration: BoxDecoration(
               color: AppColors.purpleAccent,
               borderRadius: BorderRadius.circular(2),
@@ -394,9 +501,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildNoEventsPlaceholder() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Container(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
           color: AppColors.cardSurface,
           borderRadius: BorderRadius.circular(16),
@@ -406,10 +513,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
           children: [
             Icon(
               Icons.event_available_rounded,
-              size: 40,
+              size: 38,
               color: Colors.grey.shade400,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             const Text(
               'No events on this day',
               style: TextStyle(
@@ -434,151 +541,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: events.map((event) {
-          return _buildCalendarEventCard(event);
+          return EventCard(
+            event: event,
+            onTap: () => EventDetailsScreen.show(context, event),
+            onCalendarTap: () {
+              context.read<EventProvider>().toggleCalendarMark(event.id);
+            },
+            onBookmarkTap: () {
+              context.read<EventProvider>().toggleSaveEvent(event.id);
+            },
+          );
         }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildCalendarEventCard(Event event) {
-    return GestureDetector(
-      onTap: () => EventDetailsScreen.show(context, event),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.cardSurface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.cardBorder),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(6),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Date badge
-            Container(
-              width: 50,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.navyDark,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    event.monthShort,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.greenBadge,
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    event.day,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 14),
-            // Event info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    event.eventName,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time_rounded,
-                        size: 13,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        event.time,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Icon(
-                        Icons.location_on_rounded,
-                        size: 13,
-                        color: AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: Text(
-                          event.venue,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 4,
-                    children: event.categories.take(2).map((cat) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.purpleLight,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          cat,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.purpleDarkText,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
-            // Arrow indicator
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 14,
-              color: AppColors.textMuted,
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -587,16 +560,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.purpleLight.withAlpha(180),
-              AppColors.purpleLight.withAlpha(80),
-            ],
-          ),
+          color: AppColors.purpleLight.withAlpha(120),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.purpleBorder),
         ),
@@ -605,13 +571,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.purpleAccent.withAlpha(25),
+                color: AppColors.purpleAccent.withAlpha(30),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.touch_app_rounded,
                 color: AppColors.purpleAccent,
-                size: 24,
+                size: 22,
               ),
             ),
             const SizedBox(width: 14),
@@ -620,16 +586,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '$eventCount event${eventCount == 1 ? '' : 's'} this month',
+                    '$eventCount marked date${eventCount == 1 ? '' : 's'}',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: AppColors.purpleDarkText,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   const Text(
-                    'Tap on highlighted dates to see details',
+                    'Tap any highlighted date to inspect events',
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,

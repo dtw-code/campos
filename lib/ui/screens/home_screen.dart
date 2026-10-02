@@ -409,6 +409,20 @@ class HomeScreen extends StatelessWidget {
         return EventCard(
           event: event,
           onTap: () => EventDetailsScreen.show(context, event),
+          onCalendarTap: () {
+            final isMarked = provider.toggleCalendarMark(event.id);
+            ScaffoldMessenger.of(context).clearSnackBars();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  isMarked
+                      ? 'Marked on calendar for ${event.monthShort} ${event.day}!'
+                      : 'Removed from calendar',
+                ),
+                duration: const Duration(seconds: 1),
+              ),
+            );
+          },
           onBookmarkTap: () {
             provider.toggleSaveEvent(event.id);
             ScaffoldMessenger.of(context).clearSnackBars();

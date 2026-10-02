@@ -48,9 +48,9 @@ class AppBottomNav extends StatelessWidget {
               ),
               _buildNavItem(
                 index: 2,
-                icon: Icons.calendar_today_outlined,
-                activeIcon: Icons.calendar_today_rounded,
-                label: 'Events',
+                icon: Icons.calendar_month_outlined,
+                activeIcon: Icons.calendar_month_rounded,
+                label: 'Calendar',
               ),
             ],
           ),

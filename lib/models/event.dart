@@ -9,6 +9,7 @@ class Event {
   final DateTime? registrationDeadline;
   final String? registrationUrl;
   final bool isSaved;
+  final bool isCalendarMarked;
   final String organizer;
 
   const Event({
@@ -22,6 +23,7 @@ class Event {
     this.registrationDeadline,
     this.registrationUrl,
     this.isSaved = false,
+    this.isCalendarMarked = false,
     this.organizer = 'Campus Student Council',
   });
 
@@ -116,6 +118,8 @@ class Event {
       registrationDeadline: deadline,
       registrationUrl: json['registration_url'] ?? json['registrationUrl'],
       isSaved: json['is_saved'] ?? json['isSaved'] ?? false,
+      isCalendarMarked:
+          json['is_calendar_marked'] ?? json['isCalendarMarked'] ?? false,
       organizer: json['organizer']?.toString() ?? 'Campus Pilot Committee',
     );
   }
@@ -132,6 +136,7 @@ class Event {
       'registration_deadline': registrationDeadline?.toIso8601String(),
       'registration_url': registrationUrl,
       'is_saved': isSaved,
+      'is_calendar_marked': isCalendarMarked,
       'organizer': organizer,
     };
   }
@@ -147,6 +152,7 @@ class Event {
     DateTime? registrationDeadline,
     String? registrationUrl,
     bool? isSaved,
+    bool? isCalendarMarked,
     String? organizer,
   }) {
     return Event(
@@ -160,6 +166,7 @@ class Event {
       registrationDeadline: registrationDeadline ?? this.registrationDeadline,
       registrationUrl: registrationUrl ?? this.registrationUrl,
       isSaved: isSaved ?? this.isSaved,
+      isCalendarMarked: isCalendarMarked ?? this.isCalendarMarked,
       organizer: organizer ?? this.organizer,
     );
   }

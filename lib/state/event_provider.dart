@@ -29,6 +29,28 @@ class EventProvider extends ChangeNotifier {
 
   List<Event> get savedEvents => _events.where((e) => e.isSaved).toList();
 
+  /// Events added to calendar by the student
+  List<Event> get calendarMarkedEvents =>
+      _events.where((e) => e.isCalendarMarked).toList();
+
+  /// Returns whether a specific event is marked on the calendar
+  bool isEventMarkedOnCalendar(String eventId) {
+    return _events.any((e) => e.id == eventId && e.isCalendarMarked);
+  }
+
+  /// Returns the day of month set for events marked on the calendar in a given year and month
+  Set<int> getCalendarMarkedDays(int year, int month) {
+    final days = <int>{};
+    for (final event in _events) {
+      if (event.isCalendarMarked &&
+          event.date.year == year &&
+          event.date.month == month) {
+        days.add(event.date.day);
+      }
+    }
+    return days;
+  }
+
   CampusMetrics get metrics => _metrics;
   bool get isLoading => _isLoading;
   bool get hasError => _errorMessage != null;
@@ -85,6 +107,19 @@ class EventProvider extends ChangeNotifier {
       notifyListeners();
       debugPrint('[EventProvider] Failed to toggle save: $e');
     }
+  }
+
+  /// Toggle calendar marked status of an event (instant local state update)
+  bool toggleCalendarMark(String eventId) {
+    final index = _events.indexWhere((e) => e.id == eventId);
+    if (index == -1) return false;
+
+    final target = _events[index];
+    final newCalendarStatus = !target.isCalendarMarked;
+
+    _events[index] = target.copyWith(isCalendarMarked: newCalendarStatus);
+    notifyListeners();
+    return newCalendarStatus;
   }
 
   /// Add a newly created event (e.g. extracted from AI announcement inbox)

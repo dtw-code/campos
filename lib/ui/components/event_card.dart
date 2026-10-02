@@ -6,12 +6,14 @@ class EventCard extends StatelessWidget {
   final Event event;
   final VoidCallback? onTap;
   final VoidCallback? onBookmarkTap;
+  final VoidCallback? onCalendarTap;
 
   const EventCard({
     super.key,
     required this.event,
     this.onTap,
     this.onBookmarkTap,
+    this.onCalendarTap,
   });
 
   Color _getCategoryBgColor(String category) {
@@ -219,20 +221,42 @@ class EventCard extends StatelessWidget {
                   ),
                 ),
 
-                // Bookmark / Action Icon on Right
-                IconButton(
-                  icon: Icon(
-                    event.isSaved
-                        ? Icons.bookmark_rounded
-                        : Icons.bookmark_outline_rounded,
-                    color: event.isSaved
-                        ? AppColors.purpleAccent
-                        : AppColors.textMuted,
-                    size: 22,
-                  ),
-                  splashRadius: 20,
-                  tooltip: event.isSaved ? 'Saved' : 'Save Event',
-                  onPressed: onBookmarkTap,
+                // Action Icons on Right (Calendar mark + Bookmark)
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (onCalendarTap != null || event.isCalendarMarked)
+                      IconButton(
+                        icon: Icon(
+                          event.isCalendarMarked
+                              ? Icons.event_available_rounded
+                              : Icons.calendar_today_outlined,
+                          color: event.isCalendarMarked
+                              ? AppColors.greenIndicator
+                              : AppColors.textMuted,
+                          size: 20,
+                        ),
+                        splashRadius: 20,
+                        tooltip: event.isCalendarMarked
+                            ? 'Marked on Calendar'
+                            : 'Add to Calendar',
+                        onPressed: onCalendarTap,
+                      ),
+                    IconButton(
+                      icon: Icon(
+                        event.isSaved
+                            ? Icons.bookmark_rounded
+                            : Icons.bookmark_outline_rounded,
+                        color: event.isSaved
+                            ? AppColors.purpleAccent
+                            : AppColors.textMuted,
+                        size: 20,
+                      ),
+                      splashRadius: 20,
+                      tooltip: event.isSaved ? 'Saved' : 'Save Event',
+                      onPressed: onBookmarkTap,
+                    ),
+                  ],
                 ),
               ],
             ),
