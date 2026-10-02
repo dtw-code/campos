@@ -199,10 +199,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Confirmation SnackBar appears
-        expect(
-          find.text('Event saved! Added to your campus calendar & dashboard'),
-          findsOneWidget,
-        );
+        expect(find.text('Event saved successfully!'), findsOneWidget);
 
         // Callback fired
         expect(eventCreatedCallbackFired, isTrue);
@@ -213,6 +210,66 @@ void main() {
         );
         expect(savedEvent.categories.contains('Tech'), isTrue);
         expect(savedEvent.isCalendarMarked, isTrue);
+        expect(provider.isEventMarkedOnCalendar(savedEvent.id), isTrue);
+        expect(
+          provider
+              .getCalendarMarkedDays(
+                savedEvent.date.year,
+                savedEvent.date.month,
+              )
+              .contains(savedEvent.date.day),
+          isTrue,
+        );
+      },
+    );
+
+    testWidgets(
+      'tapping Save Event with empty title shows validation error and does not add event',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(1080, 2400);
+        tester.view.devicePixelRatio = 2.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        final provider = EventProvider();
+
+        await tester.pumpWidget(
+          ChangeNotifierProvider<EventProvider>.value(
+            value: provider,
+            child: const MaterialApp(home: AnnouncementInboxScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final initialCount = provider.events.length;
+
+        // Load sample and extract
+        await tester.tap(find.text('Load Sample'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('+ Extract Event Details'));
+        await tester.pump(const Duration(milliseconds: 1500));
+        await tester.pumpAndSettle();
+
+        // Clear title field
+        final titleFinder = find.widgetWithText(TextField, 'ACM HackFest 2026');
+        await tester.enterText(titleFinder, '');
+        await tester.pumpAndSettle();
+
+        // Tap 'Save Event'
+        await tester.tap(find.text('Save Event'));
+        await tester.pumpAndSettle();
+
+        // Expect validation SnackBar
+        expect(
+          find.text('Please enter an event title before saving.'),
+          findsOneWidget,
+        );
+
+        // Events count remains unchanged
+        expect(provider.events.length, equals(initialCount));
       },
     );
   });

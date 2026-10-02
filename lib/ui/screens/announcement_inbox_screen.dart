@@ -208,7 +208,7 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
             SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Event saved! Added to your campus calendar & dashboard',
+                'Event saved successfully!',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -221,10 +221,17 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
 
     setState(() {
       _rawTextController.clear();
+      _titleController.clear();
+      _venueController.clear();
+      _timeController.clear();
       _hasExtracted = false;
     });
 
-    widget.onEventCreated?.call();
+    if (widget.onEventCreated != null) {
+      widget.onEventCreated!();
+    } else if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
   }
 
   void _handleBack() {
