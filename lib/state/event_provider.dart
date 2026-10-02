@@ -122,9 +122,32 @@ class EventProvider extends ChangeNotifier {
     return newCalendarStatus;
   }
 
-  /// Add a newly created event (e.g. extracted from AI announcement inbox)
+  /// Add or update a newly created event (e.g. extracted from AI announcement inbox)
   void addEvent(Event newEvent) {
-    _events.insert(0, newEvent);
+    // Check if an event with matching id or same title + date already exists
+    final existingIndex = _events.indexWhere(
+      (e) =>
+          e.id == newEvent.id ||
+          (e.eventName.trim().toLowerCase() ==
+                  newEvent.eventName.trim().toLowerCase() &&
+              e.date.year == newEvent.date.year &&
+              e.date.month == newEvent.date.month &&
+              e.date.day == newEvent.date.day),
+    );
+
+    if (existingIndex != -1) {
+      // Update existing event to preserve consistency and prevent duplicate entries
+      _events[existingIndex] = newEvent.copyWith(
+        id: _events[existingIndex].id,
+        isSaved: _events[existingIndex].isSaved || newEvent.isSaved,
+        isCalendarMarked:
+            _events[existingIndex].isCalendarMarked ||
+            newEvent.isCalendarMarked,
+      );
+    } else {
+      _events.insert(0, newEvent);
+    }
+
     _metrics = _metrics.copyWith(
       upcomingEventsCount: _events.length,
       newAnnouncementsCount: (_metrics.newAnnouncementsCount - 1).clamp(0, 999),

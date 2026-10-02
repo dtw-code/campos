@@ -25,6 +25,7 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
 
   bool _isExtracting = false;
   bool _hasExtracted = false;
+  bool _isSaving = false;
 
   String _selectedCategory = 'Hackathon';
   late DateTime _eventDate;
@@ -164,6 +165,8 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
   }
 
   void _saveEvent() {
+    if (_isSaving) return;
+
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -174,6 +177,10 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
       );
       return;
     }
+
+    setState(() {
+      _isSaving = true;
+    });
 
     final newEvent = Event(
       id: 'ai-evt-${DateTime.now().millisecondsSinceEpoch}',
@@ -225,6 +232,7 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
       _venueController.clear();
       _timeController.clear();
       _hasExtracted = false;
+      _isSaving = false;
     });
 
     if (widget.onEventCreated != null) {
@@ -982,7 +990,7 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
                       width: double.infinity,
                       height: 48,
                       child: ElevatedButton.icon(
-                        onPressed: _saveEvent,
+                        onPressed: _isSaving ? null : _saveEvent,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.navyDark,
                           foregroundColor: Colors.white,
@@ -990,15 +998,25 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           elevation: 0,
+                          disabledBackgroundColor: AppColors.navySurface,
                         ),
-                        icon: const Icon(
-                          Icons.check_circle_rounded,
-                          size: 18,
-                          color: AppColors.greenBadge,
-                        ),
-                        label: const Text(
-                          'Save Event',
-                          style: TextStyle(
+                        icon: _isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.check_circle_rounded,
+                                size: 18,
+                                color: AppColors.greenBadge,
+                              ),
+                        label: Text(
+                          _isSaving ? 'Saving Event...' : 'Save Event',
+                          style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                           ),

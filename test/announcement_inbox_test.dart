@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:campos/models/event.dart';
 import 'package:campos/state/event_provider.dart';
 import 'package:campos/ui/screens/announcement_inbox_screen.dart';
 
@@ -270,6 +271,46 @@ void main() {
 
         // Events count remains unchanged
         expect(provider.events.length, equals(initialCount));
+      },
+    );
+
+    testWidgets(
+      'saving the same event twice updates existing entry and prevents duplicates',
+      (WidgetTester tester) async {
+        final provider = EventProvider();
+        final event = Event(
+          id: 'test-1',
+          eventName: 'ACM HackFest 2026',
+          description: 'A hackathon',
+          date: DateTime(2026, 9, 22),
+          time: '9:00 AM - 5:00 PM',
+          venue: 'Room A',
+          categories: const ['Hackathon'],
+        );
+
+        provider.addEvent(event);
+        final countAfterFirstAdd = provider.events.length;
+
+        // Add event with identical title and date
+        final duplicateEvent = Event(
+          id: 'test-2',
+          eventName: 'acm hackfest 2026',
+          description: 'Updated description',
+          date: DateTime(2026, 9, 22),
+          time: '9:00 AM - 6:00 PM',
+          venue: 'Room B',
+          categories: const ['Tech'],
+        );
+
+        provider.addEvent(duplicateEvent);
+
+        // Count should remain unchanged (no duplicate entry)
+        expect(provider.events.length, equals(countAfterFirstAdd));
+        final matching = provider.events.where(
+          (e) => e.eventName.toLowerCase() == 'acm hackfest 2026',
+        );
+        expect(matching.length, equals(1));
+        expect(matching.first.venue, equals('Room B'));
       },
     );
   });
