@@ -36,7 +36,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onNavigateToAiInbox: () => _switchTab(1),
         onSeeAllEvents: () => _switchTab(2),
       ),
-      AiInboxScreen(onEventCreated: () => _switchTab(0)),
+      AnnouncementInboxScreen(
+        onEventCreated: () => _switchTab(2),
+        onBack: () => _switchTab(0),
+      ),
       const EventsScreen(),
     ];
 
