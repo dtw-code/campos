@@ -16,33 +16,58 @@ class AnnouncementInboxScreen extends StatefulWidget {
 }
 
 class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
-  final TextEditingController _textController = TextEditingController();
+  final TextEditingController _rawTextController = TextEditingController();
+
+  // Form controllers for review & edit mode
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _venueController = TextEditingController();
+  final TextEditingController _timeController = TextEditingController();
+
   bool _isExtracting = false;
-  Event? _extractedEvent;
+  bool _hasExtracted = false;
+
+  String _selectedCategory = 'Hackathon';
+  late DateTime _eventDate;
+  DateTime? _registrationDeadline;
+
+  final List<String> _availableCategories = [
+    'Hackathon',
+    'Tech',
+    'AI',
+    'Workshop',
+    'Career',
+    'Design',
+  ];
 
   @override
   void initState() {
     super.initState();
-    _textController.addListener(() {
+    _eventDate = DateTime(2026, 9, 22);
+    _registrationDeadline = DateTime(2026, 9, 19);
+
+    _rawTextController.addListener(() {
       setState(() {});
     });
   }
 
   @override
   void dispose() {
-    _textController.dispose();
+    _rawTextController.dispose();
+    _titleController.dispose();
+    _venueController.dispose();
+    _timeController.dispose();
     super.dispose();
   }
 
   void _loadSampleAnnouncement() {
     setState(() {
-      _textController.text =
+      _rawTextController.text =
           '🚀 ACM HackFest 2026! Join us for a 24-hour campus hackathon on Sep 22, 2026 from 9:00 AM to 5:00 PM at Student Activity Center 3rd Floor. Build cutting-edge web & AI apps. Food & swag provided! Register before Sep 19.';
     });
   }
 
   Future<void> _extractEventDetails() async {
-    final text = _textController.text.trim();
+    final text = _rawTextController.text.trim();
     if (text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -56,36 +81,120 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
 
     setState(() {
       _isExtracting = true;
-      _extractedEvent = null;
+      _hasExtracted = false;
     });
 
     // Simulate AI parsing latency
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 900));
 
     if (!mounted) return;
 
+    // Pre-populate editable form fields from parsed text
     setState(() {
       _isExtracting = false;
-      _extractedEvent = Event(
-        id: 'ai-evt-${DateTime.now().millisecondsSinceEpoch}',
-        eventName: 'ACM HackFest 2026',
-        description: text,
-        date: DateTime(2026, 9, 22, 9, 0),
-        time: '09:00 AM - 5:00 PM',
-        venue: 'Student Activity Center 3rd Floor',
-        categories: ['Hackathon', 'Tech', 'AI'],
-        registrationDeadline: DateTime(2026, 9, 19, 23, 59),
-        registrationUrl: 'https://acm.campus.edu/hackfest-2026',
-        isCalendarMarked: true,
-        organizer: 'ACM Student Chapter',
-      );
+      _hasExtracted = true;
+
+      _titleController.text = 'ACM HackFest 2026';
+      _venueController.text = 'Student Activity Center 3rd Floor';
+      _timeController.text = '09:00 AM - 5:00 PM';
+      _selectedCategory = 'Hackathon';
+      _eventDate = DateTime(2026, 9, 22);
+      _registrationDeadline = DateTime(2026, 9, 19);
     });
   }
 
-  void _saveExtractedEvent() {
-    if (_extractedEvent == null) return;
+  Future<void> _pickEventDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _eventDate,
+      firstDate: DateTime(2026, 1, 1),
+      lastDate: DateTime(2028, 12, 31),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.navyDark,
+              onPrimary: Colors.white,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
 
-    context.read<EventProvider>().addEvent(_extractedEvent!);
+    if (picked != null) {
+      setState(() {
+        _eventDate = picked;
+        // Adjust registration deadline if it exceeds event date
+        if (_registrationDeadline != null &&
+            _registrationDeadline!.isAfter(_eventDate)) {
+          _registrationDeadline = _eventDate.subtract(const Duration(days: 2));
+        }
+      });
+    }
+  }
+
+  Future<void> _pickRegistrationDeadline() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate:
+          _registrationDeadline ?? _eventDate.subtract(const Duration(days: 2)),
+      firstDate: DateTime(2026, 1, 1),
+      lastDate: _eventDate,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.purpleAccent,
+              onPrimary: Colors.white,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _registrationDeadline = picked;
+      });
+    }
+  }
+
+  void _saveEvent() {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter an event title before saving.'),
+          backgroundColor: AppColors.pinkIndicator,
+        ),
+      );
+      return;
+    }
+
+    final newEvent = Event(
+      id: 'ai-evt-${DateTime.now().millisecondsSinceEpoch}',
+      eventName: title,
+      description: _rawTextController.text.isNotEmpty
+          ? _rawTextController.text
+          : 'Extracted campus event',
+      date: _eventDate,
+      time: _timeController.text.isNotEmpty
+          ? _timeController.text
+          : '10:00 AM - 4:00 PM',
+      venue: _venueController.text.isNotEmpty
+          ? _venueController.text
+          : 'Campus Student Center',
+      categories: [_selectedCategory, 'Campus'],
+      registrationDeadline: _registrationDeadline,
+      isCalendarMarked: true,
+      organizer: 'Campus Student Council',
+    );
+
+    context.read<EventProvider>().addEvent(newEvent);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -99,7 +208,7 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
             SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Event extracted and marked on your calendar!',
+                'Event saved! Added to your campus calendar & dashboard',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -111,8 +220,8 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
     );
 
     setState(() {
-      _textController.clear();
-      _extractedEvent = null;
+      _rawTextController.clear();
+      _hasExtracted = false;
     });
 
     widget.onEventCreated?.call();
@@ -126,9 +235,27 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
     }
   }
 
+  String _formatDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final charCount = _textController.text.length;
+    final charCount = _rawTextController.text.length;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -149,7 +276,7 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
           ),
         ),
         actions: [
-          if (_textController.text.isNotEmpty)
+          if (_rawTextController.text.isNotEmpty)
             IconButton(
               icon: const Icon(
                 Icons.clear_rounded,
@@ -158,9 +285,9 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
               ),
               tooltip: 'Clear input',
               onPressed: () {
-                _textController.clear();
+                _rawTextController.clear();
                 setState(() {
-                  _extractedEvent = null;
+                  _hasExtracted = false;
                 });
               },
             ),
@@ -225,14 +352,18 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Raw Announcement Text',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                const Expanded(
+                  child: Text(
+                    'Raw Announcement Text',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 GestureDetector(
                   onTap: _loadSampleAnnouncement,
                   child: Container(
@@ -277,10 +408,10 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: _textController.text.isNotEmpty
+                  color: _rawTextController.text.isNotEmpty
                       ? AppColors.purpleAccent
                       : AppColors.cardBorder,
-                  width: _textController.text.isNotEmpty ? 1.5 : 1,
+                  width: _rawTextController.text.isNotEmpty ? 1.5 : 1,
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -293,9 +424,9 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
               child: Column(
                 children: [
                   TextField(
-                    controller: _textController,
-                    maxLines: 7,
-                    minLines: 5,
+                    controller: _rawTextController,
+                    maxLines: 6,
+                    minLines: 4,
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textPrimary,
@@ -313,7 +444,7 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
                       border: InputBorder.none,
                     ),
                   ),
-                  // Bottom bar of input container showing live character count
+                  // Bottom bar with character counter
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
@@ -362,9 +493,9 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
 
-            // Primary Action Button: "+ Extract Event Details"
+            // Primary Extraction Button
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -406,31 +537,48 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
               ),
             ),
 
-            // Extracted Event Preview Card
-            if (_extractedEvent != null) ...[
-              const SizedBox(height: 24),
+            // EDITABLE EXTRACTED EVENT FORM CARD
+            if (_hasExtracted) ...[
+              const SizedBox(height: 28),
+
+              // Form Header
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'AI Extracted Result',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                  const Expanded(
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.edit_note_rounded,
+                          color: AppColors.purpleAccent,
+                          size: 22,
+                        ),
+                        SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            'Review & Edit Event',
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
-                      vertical: 3,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color: AppColors.greenLight,
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
-                      'Ready to Add',
+                      'AI Parsed • Editable',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -440,86 +588,254 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
 
+              const SizedBox(height: 12),
+
+              // Editable Form Container
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AppColors.purpleBorder, width: 1.5),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.purpleAccent.withAlpha(20),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _extractedEvent!.eventName,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
+                    // Field 1: Event Title
+                    const Text(
+                      'Event Title',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _titleController,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Enter event title',
+                        prefixIcon: const Icon(
+                          Icons.title_rounded,
+                          size: 18,
+                          color: AppColors.purpleAccent,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.background,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AppColors.cardBorder,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AppColors.cardBorder,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AppColors.purpleAccent,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
 
-                    // Event Details Badges
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.calendar_today_rounded,
-                          size: 14,
-                          color: AppColors.purpleAccent,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          _extractedEvent!.formattedDate,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        const Icon(
-                          Icons.access_time_rounded,
-                          size: 14,
-                          color: AppColors.purpleAccent,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          _extractedEvent!.time,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 16),
+
+                    // Field 2: Category Selector (Pills)
+                    const Text(
+                      'Category',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                     const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _availableCategories.map((cat) {
+                        final isSelected = _selectedCategory == cat;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedCategory = cat;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.purpleAccent
+                                  : AppColors.purpleLight.withAlpha(100),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.purpleAccent
+                                    : AppColors.purpleBorder,
+                              ),
+                            ),
+                            child: Text(
+                              cat,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppColors.purpleDarkText,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Field 3 & 4: Event Date & Registration Deadline Pickers
                     Row(
                       children: [
-                        const Icon(
-                          Icons.location_on_rounded,
-                          size: 14,
-                          color: AppColors.greenIndicator,
-                        ),
-                        const SizedBox(width: 5),
+                        // Event Date Picker
                         Expanded(
-                          child: Text(
-                            _extractedEvent!.venue,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Event Date',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              GestureDetector(
+                                onTap: _pickEventDate,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.background,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppColors.cardBorder,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.calendar_today_rounded,
+                                        size: 16,
+                                        color: AppColors.purpleAccent,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _formatDate(_eventDate),
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        // Registration Deadline Picker
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Registration Deadline',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              GestureDetector(
+                                onTap: _pickRegistrationDeadline,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.background,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppColors.cardBorder,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.alarm_rounded,
+                                        size: 16,
+                                        color: AppColors.pinkIndicator,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _registrationDeadline != null
+                                              ? _formatDate(
+                                                  _registrationDeadline!,
+                                                )
+                                              : 'None set',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -527,25 +843,156 @@ class _AnnouncementInboxScreenState extends State<AnnouncementInboxScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Save Event Button
+                    // Venue & Time Fields Row
+                    Row(
+                      children: [
+                        // Venue
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Venue',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: _venueController,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'Venue location',
+                                  prefixIcon: const Icon(
+                                    Icons.location_on_rounded,
+                                    size: 16,
+                                    color: AppColors.greenIndicator,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
+                                  filled: true,
+                                  fillColor: AppColors.background,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.cardBorder,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.cardBorder,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.purpleAccent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 12),
+
+                        // Time
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Time',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              TextField(
+                                controller: _timeController,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'e.g. 10 AM - 4 PM',
+                                  prefixIcon: const Icon(
+                                    Icons.access_time_rounded,
+                                    size: 16,
+                                    color: AppColors.purpleAccent,
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
+                                  filled: true,
+                                  fillColor: AppColors.background,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.cardBorder,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.cardBorder,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.purpleAccent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // Primary Full-width "Save Event" Action Button
                     SizedBox(
                       width: double.infinity,
+                      height: 48,
                       child: ElevatedButton.icon(
-                        onPressed: _saveExtractedEvent,
+                        onPressed: _saveEvent,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.greenIndicator,
+                          backgroundColor: AppColors.navyDark,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           elevation: 0,
                         ),
-                        icon: const Icon(Icons.check_rounded, size: 18),
+                        icon: const Icon(
+                          Icons.check_circle_rounded,
+                          size: 18,
+                          color: AppColors.greenBadge,
+                        ),
                         label: const Text(
-                          'Save to Campus Events & Calendar',
+                          'Save Event',
                           style: TextStyle(
-                            fontSize: 13.5,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
