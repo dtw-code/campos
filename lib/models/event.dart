@@ -13,6 +13,8 @@ class Event {
   final String organizer;
   final int minMembers;
   final int maxMembers;
+  final List<String> checklist;
+  final List<bool> checkedItems;
 
   const Event({
     required this.id,
@@ -29,7 +31,65 @@ class Event {
     this.organizer = 'Campus Student Council',
     this.minMembers = 1,
     this.maxMembers = 4,
+    this.checklist = const [],
+    this.checkedItems = const [],
   });
+
+  /// Generates a default prep checklist based on the event's primary category.
+  static List<String> generateDefaultChecklist(String category) {
+    final lower = category.toLowerCase();
+    final common = [
+      'Register on event portal',
+      'Download event pass / confirmation',
+      'Arrange transport to venue',
+      'Charge devices & pack essentials',
+    ];
+
+    switch (lower) {
+      case 'hackathon':
+        return [
+          ...common,
+          'Form your team & assign roles',
+          'Set up dev environment & tools',
+          'Prepare project pitch outline',
+          'Pack charger, headphones & snacks',
+        ];
+      case 'workshop':
+        return [
+          ...common,
+          'Bring laptop with required software',
+          'Review pre-requisite materials',
+          'Prepare questions for the instructor',
+        ];
+      case 'career':
+      case 'networking':
+        return [
+          ...common,
+          'Update your resume / portfolio',
+          'Prepare elevator pitch',
+          'Research attending companies',
+          'Dress professionally',
+        ];
+      case 'tech':
+      case 'ai':
+        return [
+          ...common,
+          'Read the event agenda & speaker bios',
+          'Prepare discussion questions',
+          'Bring notebook for key takeaways',
+        ];
+      case 'symposium':
+      case 'keynote':
+        return [
+          ...common,
+          'Read speaker abstracts',
+          'Prepare networking introductions',
+          'Bring business cards if available',
+        ];
+      default:
+        return common;
+    }
+  }
 
   /// Compatibility getter for title
   String get title => eventName;
@@ -126,6 +186,20 @@ class Event {
         ? json['max_members'] as int
         : (json['maxMembers'] is int ? json['maxMembers'] as int : 4);
 
+    // Parse checklist
+    List<String> parsedChecklist = [];
+    if (json['checklist'] is List) {
+      parsedChecklist = (json['checklist'] as List)
+          .map((item) => item.toString())
+          .toList();
+    }
+    List<bool> parsedCheckedItems = [];
+    if (json['checked_items'] is List) {
+      parsedCheckedItems = (json['checked_items'] as List)
+          .map((item) => item == true)
+          .toList();
+    }
+
     return Event(
       id: json['id']?.toString() ?? '',
       eventName: json['event_name'] ?? json['eventName'] ?? json['title'] ?? '',
@@ -142,6 +216,8 @@ class Event {
       organizer: json['organizer']?.toString() ?? 'Campus Pilot Committee',
       minMembers: minM,
       maxMembers: maxM,
+      checklist: parsedChecklist,
+      checkedItems: parsedCheckedItems,
     );
   }
 
@@ -161,6 +237,8 @@ class Event {
       'organizer': organizer,
       'min_members': minMembers,
       'max_members': maxMembers,
+      'checklist': checklist,
+      'checked_items': checkedItems,
     };
   }
 
@@ -179,6 +257,8 @@ class Event {
     String? organizer,
     int? minMembers,
     int? maxMembers,
+    List<String>? checklist,
+    List<bool>? checkedItems,
   }) {
     return Event(
       id: id ?? this.id,
@@ -195,6 +275,8 @@ class Event {
       organizer: organizer ?? this.organizer,
       minMembers: minMembers ?? this.minMembers,
       maxMembers: maxMembers ?? this.maxMembers,
+      checklist: checklist ?? this.checklist,
+      checkedItems: checkedItems ?? this.checkedItems,
     );
   }
 }
