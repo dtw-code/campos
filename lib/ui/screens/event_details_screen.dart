@@ -4,7 +4,7 @@ import '../../models/event.dart';
 import '../../state/event_provider.dart';
 import '../theme/app_colors.dart';
 
-class EventDetailsScreen extends StatelessWidget {
+class EventDetailsScreen extends StatefulWidget {
   final Event event;
 
   const EventDetailsScreen({super.key, required this.event});
@@ -20,12 +20,28 @@ class EventDetailsScreen extends StatelessWidget {
   }
 
   @override
+  State<EventDetailsScreen> createState() => _EventDetailsScreenState();
+}
+
+class _EventDetailsScreenState extends State<EventDetailsScreen> {
+  bool _checklistExpanded = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ensure the event has a checklist (lazy-generate for mock/existing events)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<EventProvider>().ensureChecklist(widget.event.id);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Watch provider to keep saved and calendar-marked state in sync
     final provider = context.watch<EventProvider>();
     final currentEvent = provider.events.firstWhere(
-      (e) => e.id == event.id,
-      orElse: () => event,
+      (e) => e.id == widget.event.id,
+      orElse: () => widget.event,
     );
 
     return DraggableScrollableSheet(
@@ -211,6 +227,13 @@ class EventDetailsScreen extends StatelessWidget {
                             title: 'Organized By',
                             subtitle: currentEvent.organizer,
                           ),
+                          const Divider(height: 20),
+                          _buildDetailRow(
+                            icon: Icons.people_alt_rounded,
+                            iconColor: AppColors.purpleAccent,
+                            title: 'Team Size / Members',
+                            subtitle: currentEvent.membersRange,
+                          ),
                           if (currentEvent.registrationDeadline != null) ...[
                             const Divider(height: 20),
                             _buildDetailRow(
@@ -247,6 +270,11 @@ class EventDetailsScreen extends StatelessWidget {
                         height: 1.5,
                       ),
                     ),
+
+                    const SizedBox(height: 24),
+
+                    // Preparation Checklist Section
+                    _buildChecklistSection(currentEvent, provider),
 
                     const SizedBox(height: 24),
                   ],
@@ -498,6 +526,234 @@ class EventDetailsScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildChecklistSection(Event event, EventProvider provider) {
+    if (event.checklist.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final checkedCount = event.checkedItems
+        .where((checked) => checked)
+        .length;
+    final totalCount = event.checklist.length;
+    final progress = totalCount > 0 ? checkedCount / totalCount : 0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header with toggle and progress
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _checklistExpanded = !_checklistExpanded;
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.navyDark,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.checklist_rounded,
+                  color: AppColors.greenBadge,
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Preparation Checklist',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                // Progress badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: checkedCount == totalCount
+                        ? AppColors.greenIndicator.withAlpha(50)
+                        : Colors.white.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '$checkedCount / $totalCount',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: checkedCount == totalCount
+                          ? AppColors.greenBadge
+                          : Colors.white70,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                AnimatedRotation(
+                  turns: _checklistExpanded ? 0.0 : -0.25,
+                  duration: const Duration(milliseconds: 200),
+                  child: const Icon(
+                    Icons.expand_more_rounded,
+                    color: Colors.white54,
+                    size: 22,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Progress bar
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 5,
+            backgroundColor: AppColors.cardBorder,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              checkedCount == totalCount
+                  ? AppColors.greenIndicator
+                  : AppColors.purpleAccent,
+            ),
+          ),
+        ),
+
+        // Checklist items
+        if (_checklistExpanded) ...[
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.cardBorder),
+            ),
+            child: Column(
+              children: List.generate(event.checklist.length, (index) {
+                final isChecked = index < event.checkedItems.length &&
+                    event.checkedItems[index];
+                final isLast = index == event.checklist.length - 1;
+
+                return Column(
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        provider.toggleChecklistItem(event.id, index);
+                      },
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(index == 0 ? 14 : 0),
+                        bottom: Radius.circular(isLast ? 14 : 0),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        child: Row(
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color: isChecked
+                                    ? AppColors.greenIndicator
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: isChecked
+                                      ? AppColors.greenIndicator
+                                      : AppColors.textMuted.withAlpha(80),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: isChecked
+                                  ? const Icon(
+                                      Icons.check_rounded,
+                                      size: 15,
+                                      color: Colors.white,
+                                    )
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                event.checklist[index],
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: isChecked
+                                      ? AppColors.textMuted
+                                      : AppColors.textPrimary,
+                                  decoration: isChecked
+                                      ? TextDecoration.lineThrough
+                                      : TextDecoration.none,
+                                  decorationColor: AppColors.textMuted,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (!isLast)
+                      const Divider(height: 0, indent: 48, endIndent: 14),
+                  ],
+                );
+              }),
+            ),
+          ),
+
+          // Completion celebration
+          if (checkedCount == totalCount && totalCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.greenLight,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.greenIndicator.withAlpha(60),
+                  ),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.celebration_rounded,
+                      color: AppColors.greenIndicator,
+                      size: 20,
+                    ),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'All tasks completed! You\'re fully prepared. 🎉',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.greenIndicator,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ],
     );
   }
 

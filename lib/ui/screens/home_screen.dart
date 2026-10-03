@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/event.dart';
 import '../../state/event_provider.dart';
+import '../../state/role_provider.dart';
 import '../components/announcement_banner.dart';
 import '../components/event_card.dart';
 import '../components/metric_card.dart';
@@ -96,8 +97,11 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  /// Deep Navy Header Widget with greeting and profile avatar
+  /// Deep Navy Header Widget with greeting, role toggle, and profile avatar
   Widget _buildHeaderSection(BuildContext context) {
+    final roleProvider = context.watch<RoleProvider>();
+    final isCoordinator = roleProvider.isCoordinator;
+
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -111,81 +115,199 @@ class HomeScreen extends StatelessWidget {
         bottom: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Greeting Text Column
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Hi there! 👋',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      "Here's your campus overview",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Circular User Profile Avatar with active status badge
-              Stack(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withAlpha(50),
-                        width: 2,
-                      ),
-                      gradient: const LinearGradient(
-                        colors: [AppColors.navyAccent, Color(0xFF475569)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                  // Greeting Text Column
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Hi there! 👋',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isCoordinator
+                              ? 'Coordinator Dashboard'
+                              : "Here's your campus overview",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
                     ),
-                    child: const Center(
-                      child: Text(
-                        'CP',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                  ),
+
+                  // Circular User Profile Avatar with active status badge
+                  Stack(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withAlpha(50),
+                            width: 2,
+                          ),
+                          gradient: const LinearGradient(
+                            colors: [AppColors.navyAccent, Color(0xFF475569)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'CP',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  // Green online indicator badge
-                  Positioned(
-                    right: 2,
-                    bottom: 2,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: AppColors.greenBadge,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.navyDark, width: 2),
+                      // Green online indicator badge
+                      Positioned(
+                        right: 2,
+                        bottom: 2,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: AppColors.greenBadge,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.navyDark,
+                              width: 2,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 14),
+
+              // Role Toggle Chip
+              GestureDetector(
+                onTap: () {
+                  roleProvider.toggleRole();
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          Icon(
+                            roleProvider.isCoordinator
+                                ? Icons.admin_panel_settings_rounded
+                                : Icons.school_rounded,
+                            color: Colors.white,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Switched to ${roleProvider.roleLabel} mode',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                      backgroundColor: roleProvider.isCoordinator
+                          ? AppColors.purpleAccent
+                          : AppColors.navySurface,
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  );
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isCoordinator
+                        ? AppColors.purpleAccent.withAlpha(35)
+                        : Colors.white.withAlpha(15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isCoordinator
+                          ? AppColors.purpleAccent.withAlpha(80)
+                          : Colors.white.withAlpha(30),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        transitionBuilder: (child, animation) =>
+                            ScaleTransition(scale: animation, child: child),
+                        child: Icon(
+                          isCoordinator
+                              ? Icons.admin_panel_settings_rounded
+                              : Icons.school_rounded,
+                          key: ValueKey(isCoordinator),
+                          color: isCoordinator
+                              ? AppColors.purpleAccent
+                              : AppColors.greenBadge,
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Text(
+                          'Mode: ${roleProvider.roleLabel}',
+                          key: ValueKey(roleProvider.roleLabel),
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: isCoordinator
+                                ? AppColors.purpleAccent
+                                : Colors.white70,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        child: Container(
+                          key: ValueKey(isCoordinator),
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isCoordinator
+                                ? AppColors.purpleAccent
+                                : AppColors.greenBadge,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),

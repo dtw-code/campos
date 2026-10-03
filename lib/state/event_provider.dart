@@ -122,14 +122,92 @@ class EventProvider extends ChangeNotifier {
     return newCalendarStatus;
   }
 
-  /// Add a newly created event (e.g. extracted from AI announcement inbox)
+  /// Add or update a newly created event (e.g. extracted from AI announcement inbox)
   void addEvent(Event newEvent) {
-    _events.insert(0, newEvent);
+    // Auto-generate checklist if empty
+    Event eventToAdd = newEvent;
+    if (newEvent.checklist.isEmpty) {
+      final defaultChecklist = Event.generateDefaultChecklist(
+        newEvent.category,
+      );
+      eventToAdd = newEvent.copyWith(
+        checklist: defaultChecklist,
+        checkedItems: List.filled(defaultChecklist.length, false),
+      );
+    } else if (newEvent.checkedItems.length != newEvent.checklist.length) {
+      // Ensure checkedItems length matches checklist length
+      eventToAdd = newEvent.copyWith(
+        checkedItems: List.filled(newEvent.checklist.length, false),
+      );
+    }
+
+    // Check if an event with matching id or same title + date already exists
+    final existingIndex = _events.indexWhere(
+      (e) =>
+          e.id == eventToAdd.id ||
+          (e.eventName.trim().toLowerCase() ==
+                  eventToAdd.eventName.trim().toLowerCase() &&
+              e.date.year == eventToAdd.date.year &&
+              e.date.month == eventToAdd.date.month &&
+              e.date.day == eventToAdd.date.day),
+    );
+
+    if (existingIndex != -1) {
+      // Update existing event to preserve consistency and prevent duplicate entries
+      _events[existingIndex] = eventToAdd.copyWith(
+        id: _events[existingIndex].id,
+        isSaved: _events[existingIndex].isSaved || eventToAdd.isSaved,
+        isCalendarMarked:
+            _events[existingIndex].isCalendarMarked ||
+            eventToAdd.isCalendarMarked,
+        // Preserve existing checklist progress if available
+        checklist: _events[existingIndex].checklist.isNotEmpty
+            ? _events[existingIndex].checklist
+            : eventToAdd.checklist,
+        checkedItems: _events[existingIndex].checkedItems.isNotEmpty
+            ? _events[existingIndex].checkedItems
+            : eventToAdd.checkedItems,
+      );
+    } else {
+      _events.insert(0, eventToAdd);
+    }
+
     _metrics = _metrics.copyWith(
       upcomingEventsCount: _events.length,
       newAnnouncementsCount: (_metrics.newAnnouncementsCount - 1).clamp(0, 999),
     );
     notifyListeners();
-    _eventService.createEventFromAnnouncement(newEvent);
+    _eventService.createEventFromAnnouncement(eventToAdd);
+  }
+
+  /// Toggle a specific checklist item for an event
+  void toggleChecklistItem(String eventId, int itemIndex) {
+    final eventIndex = _events.indexWhere((e) => e.id == eventId);
+    if (eventIndex == -1) return;
+
+    final target = _events[eventIndex];
+    if (itemIndex < 0 || itemIndex >= target.checkedItems.length) return;
+
+    final updatedChecked = List<bool>.from(target.checkedItems);
+    updatedChecked[itemIndex] = !updatedChecked[itemIndex];
+
+    _events[eventIndex] = target.copyWith(checkedItems: updatedChecked);
+    notifyListeners();
+  }
+
+  /// Ensure an event has a checklist (lazy-generate for mock/existing events)
+  void ensureChecklist(String eventId) {
+    final index = _events.indexWhere((e) => e.id == eventId);
+    if (index == -1) return;
+
+    final target = _events[index];
+    if (target.checklist.isNotEmpty) return;
+
+    final defaultChecklist = Event.generateDefaultChecklist(target.category);
+    _events[index] = target.copyWith(
+      checklist: defaultChecklist,
+      checkedItems: List.filled(defaultChecklist.length, false),
+    );
+    notifyListeners();
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:campos/state/event_provider.dart';
+import 'package:campos/state/role_provider.dart';
 import 'package:campos/ui/screens/home_screen.dart';
 
 void main() {
@@ -18,7 +19,10 @@ void main() {
 
       await tester.pumpWidget(
         MultiProvider(
-          providers: [ChangeNotifierProvider(create: (_) => EventProvider())],
+          providers: [
+            ChangeNotifierProvider(create: (_) => EventProvider()),
+            ChangeNotifierProvider(create: (_) => RoleProvider()),
+          ],
           child: const MaterialApp(home: HomeScreen()),
         ),
       );
@@ -65,7 +69,10 @@ void main() {
 
         await tester.pumpWidget(
           MultiProvider(
-            providers: [ChangeNotifierProvider(create: (_) => EventProvider())],
+            providers: [
+              ChangeNotifierProvider(create: (_) => EventProvider()),
+              ChangeNotifierProvider(create: (_) => RoleProvider()),
+            ],
             child: MaterialApp(
               home: HomeScreen(
                 onNavigateToAiInbox: () {
@@ -102,7 +109,10 @@ void main() {
 
       await tester.pumpWidget(
         MultiProvider(
-          providers: [ChangeNotifierProvider(create: (_) => EventProvider())],
+          providers: [
+            ChangeNotifierProvider(create: (_) => EventProvider()),
+            ChangeNotifierProvider(create: (_) => RoleProvider()),
+          ],
           child: MaterialApp(
             home: HomeScreen(
               onSeeAllEvents: () {
@@ -135,8 +145,11 @@ void main() {
       final provider = EventProvider();
 
       await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: provider,
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: provider),
+            ChangeNotifierProvider(create: (_) => RoleProvider()),
+          ],
           child: const MaterialApp(home: HomeScreen()),
         ),
       );
@@ -164,7 +177,10 @@ void main() {
 
       await tester.pumpWidget(
         MultiProvider(
-          providers: [ChangeNotifierProvider(create: (_) => EventProvider())],
+          providers: [
+            ChangeNotifierProvider(create: (_) => EventProvider()),
+            ChangeNotifierProvider(create: (_) => RoleProvider()),
+          ],
           child: const MaterialApp(home: HomeScreen()),
         ),
       );
@@ -184,6 +200,47 @@ void main() {
       expect(find.text('Registration'), findsOneWidget);
       expect(find.text('Add to Calendar'), findsOneWidget);
       expect(find.text('Notion'), findsOneWidget);
+    });
+
+    testWidgets('tapping role toggle chip switches to Coordinator mode', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => EventProvider()),
+            ChangeNotifierProvider(create: (_) => RoleProvider()),
+          ],
+          child: const MaterialApp(home: HomeScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Verify initial Student mode
+      expect(find.text('Mode: Student'), findsOneWidget);
+      expect(find.text("Here's your campus overview"), findsOneWidget);
+
+      // Tap the role toggle chip
+      await tester.tap(find.text('Mode: Student'));
+      await tester.pumpAndSettle();
+
+      // Verify switched to Coordinator mode
+      expect(find.text('Mode: Coordinator'), findsOneWidget);
+      expect(find.text('Coordinator Dashboard'), findsOneWidget);
+
+      // Tap again to switch back
+      await tester.tap(find.text('Mode: Coordinator'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mode: Student'), findsOneWidget);
+      expect(find.text("Here's your campus overview"), findsOneWidget);
     });
   });
 }

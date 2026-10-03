@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:campos/state/event_provider.dart';
+import 'package:campos/state/role_provider.dart';
 import 'package:campos/ui/screens/main_navigation_screen.dart';
 import 'package:campos/ui/theme/app_colors.dart';
 
@@ -15,7 +16,10 @@ class CampusPilotApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => EventProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => EventProvider()),
+        ChangeNotifierProvider(create: (_) => RoleProvider()),
+      ],
       child: MaterialApp(
         title: 'CampusPilot AI',
         debugShowCheckedModeBanner: false,

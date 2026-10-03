@@ -28,6 +28,8 @@ void main() {
           venue: 'Grand Ballroom',
           categories: ['Hackathon', 'Tech'],
           registrationUrl: 'https://hackathon.example.edu/register',
+          minMembers: 2,
+          maxMembers: 4,
         );
 
         final provider = EventProvider();
@@ -65,6 +67,11 @@ void main() {
           ),
           findsOneWidget,
         );
+
+        // Verify Number of Members icon, min and max numbers
+        expect(find.text('Team Size / Members'), findsOneWidget);
+        expect(find.text('Min: 2 • Max: 4 members'), findsOneWidget);
+        expect(find.byIcon(Icons.people_alt_rounded), findsOneWidget);
 
         // Verify the 3 action buttons:
         // 1. Registration button
